@@ -1,0 +1,21 @@
+order_id,date,region,product,category,units,unit_price,customer_segment,sales_rep
+3001,2024-03-15,North,Zeta CRM,Software,45,199.99,Enterprise,Alex Kim
+3002,2024-03-16,South,Zeta CRM,Software,22,199.99,SMB,Beth Lee
+3003,2024-03-17,East,Eta BI,Analytics,18,599.99,Enterprise,Chris Park
+3004,2024-03-18,West,Eta BI,Analytics,12,599.99,SMB,Dana Ross
+3005,2024-03-19,North,Theta DB,Cloud,30,399.99,Enterprise,Evan Wright
+3006,2024-03-20,South,Theta DB,Cloud,15,399.99,SMB,Fay Green
+3007,2024-03-21,East,Iota ML,AI,8,1499.99,Enterprise,Gabe Hall
+3008,2024-03-22,West,Iota ML,AI,5,1499.99,SMB,Holly King
+3009,2024-03-23,North,Zeta CRM,Software,38,199.99,Enterprise,Ivan Adams
+3010,2024-03-24,South,Eta BI,Analytics,20,599.99,SMB,Judy Baker
+3011,2024-04-01,East,Theta DB,Cloud,25,399.99,Enterprise,Kyle Clark
+3012,2024-04-02,West,Iota ML,AI,10,1499.99,SMB,Liam Davis
+3013,2024-04-03,North,Zeta CRM,Software,50,199.99,Enterprise,Maya Evans
+3014,2024-04-04,South,Eta BI,Analytics,16,599.99,SMB,Noah Foster
+3015,2024-04-05,East,Theta DB,Cloud,35,399.99,Enterprise,Olivia Gray
+3016,2024-04-06,West,Iota ML,AI,7,1499.99,SMB,Paul Hill
+3017,2024-04-07,North,Zeta CRM,Software,42,199.99,Enterprise,Quinn Irwin
+3018,2024-04-08,South,Eta BI,Analytics,24,599.99,SMB,Riley Jones
+3019,2024-04-09,East,Theta DB,Cloud,28,399.99,Enterprise,Sam Kelly
+3020,2024-04-10,West,Iota ML,AI,9,1499.99,SMB,Tara Long

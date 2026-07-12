@@ -1,0 +1,46 @@
+order_id,date,region,product,category,units,unit_price,customer_segment,sales_rep
+2001,2024-01-21,North Europe,Nordic Cloud,Platform,17,399.99,Enterprise,Lars Eriksson
+2002,2024-01-22,North Europe,EuroStream,Data,4,199.99,Enterprise,Marie Dubois
+2003,2024-01-08,North Europe,EuroStream,AI,36,899.99,Enterprise,Sofia Rossi
+2004,2024-01-19,East Europe,Nordic Cloud,AI,29,599.99,SMB,Marie Dubois
+2005,2024-01-07,East Europe,Nordic Cloud,SaaS,26,199.99,SMB,Klaus Mueller
+2006,2024-01-20,East Europe,Nordic Cloud,Data,36,199.99,SMB,Lars Eriksson
+2007,2024-01-18,East Europe,EuroStream,Platform,38,399.99,Startup,Lars Eriksson
+2008,2024-01-02,West Europe,Alpine Suite,SaaS,16,199.99,SMB,Klaus Mueller
+2009,2024-01-15,East Europe,Baltic AI,Platform,24,399.99,Startup,Klaus Mueller
+2010,2024-01-23,North Europe,EuroStream,AI,36,399.99,Enterprise,Sofia Rossi
+2011,2024-01-13,East Europe,EuroStream,AI,22,199.99,Enterprise,Lars Eriksson
+2012,2024-01-26,East Europe,MediData,Platform,6,399.99,Startup,Klaus Mueller
+2013,2024-01-07,South Europe,MediData,Data,11,599.99,Enterprise,Marie Dubois
+2014,2024-01-24,East Europe,EuroStream,Data,39,899.99,SMB,Marie Dubois
+2015,2024-01-05,South Europe,Nordic Cloud,SaaS,9,399.99,Startup,Marie Dubois
+2016,2024-02-26,South Europe,EuroStream,SaaS,26,899.99,Startup,Sofia Rossi
+2017,2024-02-17,East Europe,EuroStream,SaaS,9,1299.99,SMB,Klaus Mueller
+2018,2024-02-04,East Europe,MediData,AI,31,199.99,Startup,Klaus Mueller
+2019,2024-02-17,West Europe,EuroStream,SaaS,21,1299.99,Startup,Marie Dubois
+2020,2024-02-05,East Europe,Baltic AI,Cloud,35,199.99,Startup,Klaus Mueller
+2021,2024-02-16,North Europe,Nordic Cloud,Platform,21,399.99,Enterprise,Marie Dubois
+2022,2024-02-19,North Europe,Nordic Cloud,Data,6,1299.99,Enterprise,Marie Dubois
+2023,2024-02-22,South Europe,EuroStream,AI,18,1299.99,Startup,Sofia Rossi
+2024,2024-02-07,West Europe,Alpine Suite,Data,25,899.99,Startup,Sofia Rossi
+2025,2024-02-04,West Europe,Baltic AI,SaaS,23,199.99,Startup,Marie Dubois
+2026,2024-02-19,West Europe,Nordic Cloud,SaaS,5,399.99,Enterprise,Lars Eriksson
+2027,2024-02-28,East Europe,Nordic Cloud,Cloud,17,599.99,Startup,Sofia Rossi
+2028,2024-02-07,West Europe,EuroStream,Cloud,32,399.99,SMB,Sofia Rossi
+2029,2024-02-07,North Europe,Nordic Cloud,Data,24,899.99,SMB,Sofia Rossi
+2030,2024-02-28,North Europe,Nordic Cloud,SaaS,27,599.99,Enterprise,Marie Dubois
+2031,2024-03-07,West Europe,EuroStream,Data,10,899.99,Enterprise,Klaus Mueller
+2032,2024-03-15,West Europe,Nordic Cloud,Data,37,199.99,Enterprise,Lars Eriksson
+2033,2024-03-03,West Europe,Baltic AI,Data,33,899.99,Enterprise,Sofia Rossi
+2034,2024-03-02,West Europe,MediData,SaaS,26,599.99,SMB,Klaus Mueller
+2035,2024-03-14,South Europe,Baltic AI,AI,20,399.99,Enterprise,Lars Eriksson
+2036,2024-03-24,East Europe,Nordic Cloud,SaaS,39,899.99,Startup,Marie Dubois
+2037,2024-03-02,North Europe,Baltic AI,SaaS,40,199.99,Startup,Marie Dubois
+2038,2024-03-13,North Europe,EuroStream,AI,39,1299.99,Enterprise,Lars Eriksson
+2039,2024-03-14,East Europe,Alpine Suite,AI,22,399.99,SMB,Sofia Rossi
+2040,2024-03-05,East Europe,MediData,Platform,6,199.99,SMB,Lars Eriksson
+2041,2024-03-03,West Europe,EuroStream,Platform,10,599.99,Enterprise,Marie Dubois
+2042,2024-03-12,East Europe,Baltic AI,Data,36,599.99,Startup,Lars Eriksson
+2043,2024-03-22,East Europe,Nordic Cloud,AI,18,199.99,Enterprise,Marie Dubois
+2044,2024-03-09,East Europe,EuroStream,AI,23,399.99,Startup,Klaus Mueller
+2045,2024-03-17,South Europe,Alpine Suite,SaaS,7,899.99,SMB,Lars Eriksson

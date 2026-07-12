@@ -1,0 +1,51 @@
+entry_id,date,department,employee,project,client,hours,hourly_rate,status
+7001,2024-02-25,Sales,Carol,Website Redesign,Acme Corp,23,100,Non-billable
+7002,2024-06-11,Engineering,Bob,Mobile App,Initech,147,150,Non-billable
+7003,2024-03-01,Sales,Alice,Cloud Migration,Umbrella,189,75,Billable
+7004,2024-12-15,Engineering,Alice,Website Redesign,Globex,11,100,Billable
+7005,2024-07-19,Sales,Carol,Data Pipeline,Acme Corp,15,100,Non-billable
+7006,2024-08-07,HR,Frank,Cloud Migration,Stark Ind,97,150,Non-billable
+7007,2024-11-17,Sales,Frank,Cloud Migration,Stark Ind,13,125,Non-billable
+7008,2024-06-17,Engineering,Frank,Mobile App,Acme Corp,143,125,Non-billable
+7009,2024-03-11,Marketing,Eve,Data Pipeline,Acme Corp,178,100,Non-billable
+7010,2024-06-01,Design,Eve,Website Redesign,Initech,109,150,Billable
+7011,2024-07-18,HR,Frank,Website Redesign,Initech,100,75,Non-billable
+7012,2024-09-16,Design,Bob,Cloud Migration,Umbrella,171,75,Non-billable
+7013,2024-01-05,Sales,Bob,Website Redesign,Initech,128,50,Non-billable
+7014,2024-07-21,Sales,Alice,Website Redesign,Stark Ind,185,100,Billable
+7015,2024-12-03,Engineering,David,Website Redesign,Stark Ind,140,100,Non-billable
+7016,2024-12-21,Sales,Alice,API Gateway,Initech,28,150,Non-billable
+7017,2024-06-14,Marketing,Alice,Mobile App,Umbrella,18,150,Billable
+7018,2024-06-22,Design,Frank,Website Redesign,Acme Corp,193,75,Non-billable
+7019,2024-03-21,Marketing,David,API Gateway,Globex,147,100,Non-billable
+7020,2024-11-06,HR,David,Data Pipeline,Acme Corp,142,50,Billable
+7021,2024-06-15,Sales,Carol,Data Pipeline,Acme Corp,126,50,Billable
+7022,2024-09-17,HR,Bob,API Gateway,Stark Ind,143,100,Billable
+7023,2024-04-19,Marketing,Alice,API Gateway,Stark Ind,149,100,Billable
+7024,2024-05-13,Engineering,Eve,Website Redesign,Globex,62,100,Billable
+7025,2024-05-19,Design,Alice,Cloud Migration,Initech,14,75,Billable
+7026,2024-09-05,HR,Bob,Data Pipeline,Umbrella,97,150,Non-billable
+7027,2024-12-27,HR,David,API Gateway,Umbrella,17,100,Billable
+7028,2024-10-21,Engineering,Eve,Cloud Migration,Umbrella,138,75,Non-billable
+7029,2024-02-23,Engineering,Carol,Data Pipeline,Initech,188,150,Non-billable
+7030,2024-04-25,Sales,Carol,Mobile App,Globex,90,100,Non-billable
+7031,2024-07-17,Marketing,Bob,Cloud Migration,Umbrella,25,125,Non-billable
+7032,2024-02-09,HR,Eve,API Gateway,Acme Corp,27,100,Non-billable
+7033,2024-07-10,Engineering,David,Cloud Migration,Initech,23,150,Billable
+7034,2024-05-27,Sales,Eve,Cloud Migration,Initech,175,125,Billable
+7035,2024-09-19,Marketing,Carol,Website Redesign,Globex,186,125,Billable
+7036,2024-11-16,Design,David,Cloud Migration,Acme Corp,15,125,Non-billable
+7037,2024-06-28,Marketing,Bob,Cloud Migration,Acme Corp,148,75,Non-billable
+7038,2024-05-23,HR,Alice,API Gateway,Umbrella,139,150,Billable
+7039,2024-05-10,Design,David,API Gateway,Umbrella,186,50,Billable
+7040,2024-08-22,Design,Bob,Website Redesign,Initech,165,50,Billable
+7041,2024-04-10,Sales,David,Mobile App,Initech,198,150,Billable
+7042,2024-10-18,HR,Carol,Mobile App,Stark Ind,36,125,Billable
+7043,2024-07-26,Sales,Alice,Website Redesign,Stark Ind,172,125,Non-billable
+7044,2024-09-12,Design,David,Mobile App,Globex,177,125,Billable
+7045,2024-04-07,Engineering,David,Website Redesign,Acme Corp,71,50,Non-billable
+7046,2024-09-01,Engineering,Bob,Data Pipeline,Initech,177,100,Billable
+7047,2024-05-22,Marketing,Bob,Cloud Migration,Acme Corp,87,50,Non-billable
+7048,2024-04-14,Design,Eve,Data Pipeline,Umbrella,49,125,Billable
+7049,2024-08-28,Engineering,Carol,Mobile App,Umbrella,109,50,Billable
+7050,2024-08-28,Marketing,Eve,Cloud Migration,Acme Corp,42,50,Non-billable

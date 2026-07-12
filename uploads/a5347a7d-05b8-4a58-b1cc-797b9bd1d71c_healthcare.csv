@@ -1,0 +1,56 @@
+patient_id,admission_date,diagnosis,doctor,department,age,treatment_cost,insurance_type,treatment_days
+10001,2024-03-26,Asthma,Dr. Smith,Orthopedics,80,805,Medicare,8
+10002,2024-05-13,Fracture,Dr. Brown,Cardiology,24,2317,Medicaid,12
+10003,2024-09-07,Hypertension,Dr. Williams,Orthopedics,43,342,Private,11
+10004,2024-12-12,Hypertension,Dr. Brown,Pulmonology,77,4670,Private,12
+10005,2024-12-27,Fracture,Dr. Brown,General Medicine,49,601,Medicaid,2
+10006,2024-02-14,Hypertension,Dr. Johnson,Orthopedics,39,496,Private,8
+10007,2024-09-21,Allergy,Dr. Johnson,Orthopedics,44,646,Self-Pay,1
+10008,2024-08-04,Flu,Dr. Brown,Neurology,61,4986,Private,14
+10009,2024-12-02,Allergy,Dr. Brown,Neurology,30,3240,Medicaid,14
+10010,2024-08-02,Flu,Dr. Brown,Cardiology,24,4190,Private,10
+10011,2024-02-18,Pneumonia,Dr. Williams,Orthopedics,28,2209,Self-Pay,14
+10012,2024-09-02,Allergy,Dr. Davis,Neurology,39,3464,Private,8
+10013,2024-03-28,Pneumonia,Dr. Davis,General Medicine,75,2660,Medicare,1
+10014,2024-08-17,Flu,Dr. Brown,Pulmonology,22,3038,Self-Pay,10
+10015,2024-10-05,Asthma,Dr. Smith,Orthopedics,62,4254,Self-Pay,12
+10016,2024-01-18,Asthma,Dr. Brown,Cardiology,63,2459,Medicaid,4
+10017,2024-10-24,Diabetes,Dr. Williams,Pulmonology,52,2441,Private,7
+10018,2024-07-25,Asthma,Dr. Johnson,Cardiology,68,3225,Medicare,5
+10019,2024-09-24,Migraine,Dr. Williams,Orthopedics,69,374,Medicaid,5
+10020,2024-05-06,Asthma,Dr. Smith,Pulmonology,31,1980,Medicare,9
+10021,2024-10-25,Hypertension,Dr. Williams,General Medicine,53,1243,Self-Pay,8
+10022,2024-07-22,Migraine,Dr. Johnson,Cardiology,25,1240,Self-Pay,13
+10023,2024-10-04,Diabetes,Dr. Johnson,Neurology,53,4945,Self-Pay,7
+10024,2024-04-24,Diabetes,Dr. Smith,General Medicine,51,4813,Self-Pay,1
+10025,2024-02-27,Hypertension,Dr. Johnson,Neurology,68,1238,Private,3
+10026,2024-09-14,Allergy,Dr. Davis,General Medicine,25,1114,Self-Pay,12
+10027,2024-04-09,Migraine,Dr. Davis,General Medicine,28,4191,Self-Pay,4
+10028,2024-08-06,Flu,Dr. Smith,General Medicine,35,4094,Self-Pay,11
+10029,2024-09-06,Pneumonia,Dr. Smith,General Medicine,20,4418,Private,9
+10030,2024-11-20,Allergy,Dr. Williams,Cardiology,70,2649,Medicaid,1
+10031,2024-04-21,Pneumonia,Dr. Williams,Cardiology,55,2958,Medicare,8
+10032,2024-10-06,Asthma,Dr. Davis,Orthopedics,55,2171,Self-Pay,3
+10033,2024-02-13,Fracture,Dr. Smith,Cardiology,74,195,Medicare,4
+10034,2024-05-08,Diabetes,Dr. Williams,Pulmonology,43,231,Self-Pay,5
+10035,2024-09-01,Allergy,Dr. Williams,Pulmonology,65,4369,Medicaid,10
+10036,2024-11-04,Pneumonia,Dr. Johnson,General Medicine,61,2697,Self-Pay,12
+10037,2024-07-17,Hypertension,Dr. Johnson,General Medicine,27,4716,Private,6
+10038,2024-04-27,Diabetes,Dr. Davis,Neurology,83,3792,Private,12
+10039,2024-04-17,Diabetes,Dr. Williams,General Medicine,81,2627,Self-Pay,8
+10040,2024-04-03,Fracture,Dr. Davis,General Medicine,57,1703,Medicaid,6
+10041,2024-09-05,Flu,Dr. Davis,Cardiology,53,873,Private,9
+10042,2024-03-06,Hypertension,Dr. Brown,Pulmonology,43,1852,Medicare,9
+10043,2024-06-25,Flu,Dr. Williams,Neurology,50,2115,Private,13
+10044,2024-08-21,Flu,Dr. Johnson,Orthopedics,70,4132,Self-Pay,6
+10045,2024-07-20,Flu,Dr. Smith,Neurology,36,3896,Self-Pay,14
+10046,2024-01-12,Allergy,Dr. Johnson,Cardiology,32,3327,Self-Pay,7
+10047,2024-04-06,Diabetes,Dr. Johnson,Cardiology,61,4476,Private,7
+10048,2024-02-15,Pneumonia,Dr. Williams,Orthopedics,62,2426,Self-Pay,2
+10049,2024-11-20,Fracture,Dr. Davis,Cardiology,60,2636,Medicare,13
+10050,2024-03-16,Fracture,Dr. Williams,Pulmonology,19,2722,Private,13
+10051,2024-02-22,Migraine,Dr. Smith,Orthopedics,68,2679,Medicare,7
+10052,2024-01-19,Diabetes,Dr. Smith,Cardiology,39,270,Medicare,14
+10053,2024-10-21,Fracture,Dr. Smith,Orthopedics,31,1668,Medicare,1
+10054,2024-12-01,Diabetes,Dr. Davis,Pulmonology,55,2690,Medicaid,11
+10055,2024-10-01,Pneumonia,Dr. Smith,Pulmonology,41,4697,Private,14
