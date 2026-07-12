@@ -1,4 +1,4 @@
-# CSV QA Agent — Research-Grade Agentic AI System
+# CSV AI Agent — Research-Grade Agentic AI System
 
 [![Tests](https://img.shields.io/badge/tests-30%2F30%20passing-brightgreen)](.)
 [![Python](https://img.shields.io/badge/python-3.11-blue)](.)
