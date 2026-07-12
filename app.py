@@ -1,8 +1,7 @@
 """
-CSV QA Agent - Complete Fixed Version
-======================================
-Serves the exact dark UI from user screenshots.
-Windows-compatible: No SIGALRM.
+CSV QA Agent - UNIVERSAL VERSION (FIXED)
+=========================================
+Works with ANY CSV columns. No hardcoded column names.
 """
 import os
 import sys
@@ -66,7 +65,7 @@ class SecureSandbox:
         for name in self.ALLOWED_BUILTINS:
             if hasattr(builtins, name):
                 safe[name] = getattr(builtins, name)
-        for exc_name in ['Exception', 'ValueError', 'TypeError', 'KeyError', 
+        for exc_name in ['Exception', 'ValueError', 'TypeError', 'KeyError',
                           'IndexError', 'AttributeError', 'ZeroDivisionError',
                           'RuntimeError', 'StopIteration', 'NotImplementedError']:
             if hasattr(builtins, exc_name):
@@ -130,86 +129,185 @@ class SecureSandbox:
         safe_locals = {}
         return self._run_with_timeout(code, safe_globals, safe_locals)
 
-# ==================== RULE AGENT ====================
+# ==================== UNIVERSAL RULE AGENT (FIXED) ====================
 class RuleAgent:
     def __init__(self, df):
         self.df = df
         self.sandbox = SecureSandbox(df, timeout=5.0)
+        self.numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+        self.cat_cols = [c for c in df.columns if not pd.api.types.is_numeric_dtype(df[c])]
+        self.date_col = next((c for c in df.columns if 'date' in c.lower()), None)
+        self.has_revenue = 'units' in df.columns and 'unit_price' in df.columns
+
+    def _resolve_metric(self, question: str) -> Tuple[str, str]:
+        q = question.lower()
+        for col in self.numeric_cols:
+            if col.lower() in q:
+                return f"df['{col}']", col
+        revenue_words = ['revenue', 'sales', 'income', 'turnover', 'proceeds']
+        if any(w in q for w in revenue_words) and self.has_revenue:
+            return "(df['units'] * df['unit_price'])", 'revenue'
+        price_words = ['price', 'cost', 'rate', 'fee']
+        if any(w in q for w in price_words) and 'unit_price' in self.numeric_cols:
+            return "df['unit_price']", 'unit_price'
+        qty_words = ['unit', 'quantity', 'qty', 'count', 'amount', 'volume']
+        if any(w in q for w in qty_words) and 'units' in self.numeric_cols:
+            return "df['units']", 'units'
+        hour_words = ['hour', 'hr', 'time', 'duration']
+        if any(w in q for w in hour_words):
+            for col in self.numeric_cols:
+                if any(h in col.lower() for h in ['hour', 'hr', 'time']):
+                    return f"df['{col}']", col
+        age_words = ['age', 'old', 'year']
+        if any(w in q for w in age_words):
+            for col in self.numeric_cols:
+                if 'age' in col.lower():
+                    return f"df['{col}']", col
+        non_id = [c for c in self.numeric_cols if not any(x in c.lower() for x in ['id', 'index', 'order', 'entry'])]
+        if non_id:
+            return f"df['{non_id[0]}']", non_id[0]
+        elif self.numeric_cols:
+            return f"df['{self.numeric_cols[0]}']", self.numeric_cols[0]
+        return None, None
+
+    def _resolve_group_col(self, question: str) -> str:
+        q = question.lower()
+        for c in self.cat_cols:
+            if c.lower() in q:
+                return c
+        if self.cat_cols:
+            return self.cat_cols[0]
+        return None
+
+    def _is_money_col(self, val_name: str) -> bool:
+        return val_name in ('revenue', 'sales', 'income', 'price', 'cost', 'fee', 'rate', 'turnover')
 
     def answer(self, question: str) -> Tuple[str, str, Any, str]:
         q = question.lower()
+        df = self.df
 
         def has_any(words): return any(w in q for w in words)
-        def has_all(words): return all(w in q for w in words)
+
+        val_expr, val_name = self._resolve_metric(question)
+        if val_expr is None:
+            return "No numeric columns found to analyze.", "", None, ""
 
         code = ""
+        cat_cols = self.cat_cols
+        date_col = self.date_col
+        group_col = self._resolve_group_col(question)
+        is_money = self._is_money_col(val_name)
+        prefix = "$" if is_money else ""
 
-        if has_any(['total revenue', 'total sales', 'sum of revenue', 'all revenue', 'overall revenue', 'revenue total']):
-            code = """df['revenue'] = df['units'] * df['unit_price']
-total = df['revenue'].sum()
-result = {'answer': f'Total revenue: ${total:,.2f}', 'data': {'total': round(float(total),2)}, 'viz_type': 'number'}"""
+        # ===== TOTAL / SUM =====
+        if has_any(['total', 'sum', 'all', 'overall']):
+            code = f"""total = ({val_expr}).sum()
+result = {{'answer': f'Total {val_name}: {prefix}{{total:,.2f}}', 'data': {{'total': round(float(total),2)}}, 'viz_type': 'number'}}"""
 
-        elif has_all(['region']) and has_any(['highest', 'top', 'best', 'most', 'maximum', 'max', 'biggest', 'largest']):
-            code = """df['revenue'] = df['units'] * df['unit_price']
-grouped = df.groupby('region')['revenue'].sum().sort_values(ascending=False)
-result = {'answer': f'{grouped.index[0]} has the highest revenue at ${grouped.iloc[0]:,.2f}', 'data': {str(k): round(float(v), 2) for k, v in grouped.to_dict().items()}, 'viz_type': 'bar'}"""
+        # ===== TOP / HIGHEST / MAXIMUM =====
+        elif has_any(['highest', 'top', 'best', 'most', 'maximum', 'max', 'biggest', 'largest']):
+            if group_col:
+                if val_name == 'revenue' and self.has_revenue:
+                    code = f"""df['revenue'] = {val_expr}
+grouped = df.groupby('{group_col}')['revenue'].sum().sort_values(ascending=False)
+result = {{'answer': f'{{grouped.index[0]}} has the highest {val_name} at {prefix}{{grouped.iloc[0]:,.2f}}', 'data': {{str(k): round(float(v), 2) for k, v in grouped.to_dict().items()}}, 'viz_type': 'bar'}}"""
+                else:
+                    code = f"""grouped = df.groupby('{group_col}')['{val_name}'].sum().sort_values(ascending=False)
+result = {{'answer': f'{{grouped.index[0]}} has the highest {val_name} at {prefix}{{grouped.iloc[0]:,.2f}}', 'data': {{str(k): round(float(v), 2) for k, v in grouped.to_dict().items()}}, 'viz_type': 'bar'}}"""
+            else:
+                code = f"""max_val = ({val_expr}).max()
+max_idx = ({val_expr}).idxmax()
+result = {{'answer': f'Maximum {val_name}: {prefix}{{max_val:,.2f}} (row {{max_idx}})', 'data': {{'max': round(float(max_val),2)}}, 'viz_type': 'number'}}"""
 
-        elif has_all(['product']) and has_any(['highest', 'top', 'best', 'most', 'maximum', 'max', 'biggest', 'largest']):
-            code = """df['revenue'] = df['units'] * df['unit_price']
-grouped = df.groupby('product')['revenue'].sum().sort_values(ascending=False)
-result = {'answer': f'{grouped.index[0]} has the highest revenue at ${grouped.iloc[0]:,.2f}', 'data': {str(k): round(float(v), 2) for k, v in grouped.to_dict().items()}, 'viz_type': 'bar'}"""
+        # ===== AVERAGE / MEAN =====
+        elif has_any(['average', 'mean', 'avg']):
+            if group_col:
+                if val_name == 'revenue' and self.has_revenue:
+                    code = f"""df['revenue'] = {val_expr}
+grouped = df.groupby('{group_col}')['revenue'].mean().round(2)
+result = {{'answer': 'Average {val_name} by {group_col}: ' + ', '.join([f"{{k}}={prefix}{{v}}" for k,v in grouped.items()]), 'data': {{str(k): float(v) for k,v in grouped.to_dict().items()}}, 'viz_type': 'table'}}"""
+                else:
+                    code = f"""grouped = df.groupby('{group_col}')['{val_name}'].mean().round(2)
+result = {{'answer': 'Average {val_name} by {group_col}: ' + ', '.join([f"{{k}}={prefix}{{v}}" for k,v in grouped.items()]), 'data': {{str(k): float(v) for k,v in grouped.to_dict().items()}}, 'viz_type': 'table'}}"""
+            else:
+                code = f"""avg_val = ({val_expr}).mean()
+result = {{'answer': f'Average {val_name}: {prefix}{{avg_val:,.2f}}', 'data': {{'average': round(float(avg_val),2)}}, 'viz_type': 'number'}}"""
 
-        elif has_all(['category']) and has_any(['highest', 'top', 'best', 'most', 'maximum', 'max']):
-            code = """df['revenue'] = df['units'] * df['unit_price']
-grouped = df.groupby('category')['revenue'].sum().sort_values(ascending=False)
-result = {'answer': f'{grouped.index[0]} has the highest revenue at ${grouped.iloc[0]:,.2f}', 'data': {str(k): round(float(v), 2) for k, v in grouped.to_dict().items()}, 'viz_type': 'bar'}"""
-
-        elif has_any(['sales rep', 'rep', 'representative']) and has_any(['highest', 'top', 'best', 'most', 'maximum', 'max']):
-            code = """df['revenue'] = df['units'] * df['unit_price']
-grouped = df.groupby('sales_rep')['revenue'].sum().sort_values(ascending=False)
-result = {'answer': f'{grouped.index[0]} has the highest revenue at ${grouped.iloc[0]:,.2f}', 'data': {str(k): round(float(v), 2) for k, v in grouped.to_dict().items()}, 'viz_type': 'bar'}"""
-
-        elif has_any(['average', 'mean', 'avg']) and has_any(['segment', 'customer_segment']):
-            code = """df['revenue'] = df['units'] * df['unit_price']
-grouped = df.groupby('customer_segment')['revenue'].mean().round(2)
-result = {'answer': 'Average revenue by segment: ' + ', '.join([f"{k}=${v}" for k,v in grouped.items()]), 'data': {str(k): float(v) for k,v in grouped.to_dict().items()}, 'viz_type': 'table'}"""
-
-        elif has_any(['average', 'mean', 'avg']) and has_all(['region']):
-            code = """df['revenue'] = df['units'] * df['unit_price']
-grouped = df.groupby('region')['revenue'].mean().round(2)
-result = {'answer': 'Average revenue by region: ' + ', '.join([f"{k}=${v}" for k,v in grouped.items()]), 'data': {str(k): float(v) for k,v in grouped.to_dict().items()}, 'viz_type': 'table'}"""
-
-        elif has_any(['average', 'mean', 'avg']) and has_all(['product']):
-            code = """df['revenue'] = df['units'] * df['unit_price']
-grouped = df.groupby('product')['revenue'].mean().round(2)
-result = {'answer': 'Average revenue by product: ' + ', '.join([f"{k}=${v}" for k,v in grouped.items()]), 'data': {str(k): float(v) for k,v in grouped.to_dict().items()}, 'viz_type': 'table'}"""
-
+        # ===== GROWTH / MoM / TREND =====
         elif has_any(['growth', 'mom', 'month over month', 'monthly', 'month to month', 'trend']):
-            code = """df['date'] = pd.to_datetime(df['date'])
-df['month'] = df['date'].dt.to_period('M')
-df['revenue'] = df['units'] * df['unit_price']
+            if date_col and val_name:
+                if val_name == 'revenue' and self.has_revenue:
+                    code = f"""df['{date_col}'] = pd.to_datetime(df['{date_col}'])
+df['month'] = df['{date_col}'].dt.to_period('M')
+df['revenue'] = {val_expr}
 monthly = df.groupby('month')['revenue'].sum()
 growth = monthly.pct_change() * 100
-g = {str(k): round(float(v),1) for k,v in growth.dropna().items()}
-result = {'answer': 'Month-over-month growth: ' + ', '.join([f"{k}={v}%" for k,v in g.items()]), 'data': g, 'viz_type': 'line'}"""
+g = {{str(k): round(float(v),1) for k,v in growth.dropna().items()}}
+result = {{'answer': 'Month-over-month {val_name} growth: ' + ', '.join([f"{{k}}={{v}}%" for k,v in g.items()]), 'data': g, 'viz_type': 'line'}}"""
+                else:
+                    code = f"""df['{date_col}'] = pd.to_datetime(df['{date_col}'])
+df['month'] = df['{date_col}'].dt.to_period('M')
+monthly = df.groupby('month')['{val_name}'].sum()
+growth = monthly.pct_change() * 100
+g = {{str(k): round(float(v),1) for k,v in growth.dropna().items()}}
+result = {{'answer': 'Month-over-month {val_name} growth: ' + ', '.join([f"{{k}}={{v}}%" for k,v in g.items()]), 'data': g, 'viz_type': 'line'}}"""
+            else:
+                code = f"""result = {{'answer': 'No date column found for growth calculation', 'data': {{}}, 'viz_type': ''}}"""
 
-        elif has_any(['compare', 'vs', 'versus', 'pivot', 'breakdown', 'cross', 'by region and', 'by segment and']):
-            code = """df['revenue'] = df['units'] * df['unit_price']
-pivot = df.pivot_table(values='revenue', index='region', columns='customer_segment', aggfunc='sum', fill_value=0)
-result = {'answer': 'Enterprise vs SMB sales by region', 'data': {str(k): {str(k2): float(v2) for k2, v2 in v.items()} for k, v in pivot.to_dict().items()}, 'viz_type': 'table'}"""
+        # ===== COMPARE / PIVOT / BREAKDOWN =====
+        elif has_any(['compare', 'vs', 'versus', 'pivot', 'breakdown', 'cross']):
+            if len(cat_cols) >= 2:
+                c1, c2 = cat_cols[0], cat_cols[1]
+                if val_name == 'revenue' and self.has_revenue:
+                    code = f"""df['revenue'] = {val_expr}
+pivot = df.pivot_table(values='revenue', index='{c1}', columns='{c2}', aggfunc='sum', fill_value=0)
+result = {{'answer': '{c1} vs {c2} {val_name} breakdown', 'data': {{str(k): {{str(k2): float(v2) for k2, v2 in v.items()}} for k, v in pivot.to_dict().items()}}, 'viz_type': 'table'}}"""
+                else:
+                    code = f"""pivot = df.pivot_table(values='{val_name}', index='{c1}', columns='{c2}', aggfunc='sum', fill_value=0)
+result = {{'answer': '{c1} vs {c2} {val_name} breakdown', 'data': {{str(k): {{str(k2): float(v2) for k2, v2 in v.items()}} for k, v in pivot.to_dict().items()}}, 'viz_type': 'table'}}"""
+            else:
+                code = f"""result = {{'answer': 'Need at least 2 categorical columns for comparison', 'data': {{}}, 'viz_type': ''}}"""
 
+        # ===== CORRELATION =====
         elif has_any(['correlation', 'correlate', 'relationship between']):
-            code = """corr = df['units'].corr(df['unit_price'])
-result = {'answer': f'Correlation between units and unit_price: {corr:.4f}', 'data': {'correlation': round(float(corr),4)}, 'viz_type': 'number'}"""
+            if len(self.numeric_cols) >= 2:
+                mentioned = [c for c in self.numeric_cols if c.lower() in q]
+                if len(mentioned) >= 2:
+                    c1, c2 = mentioned[0], mentioned[1]
+                else:
+                    c1, c2 = self.numeric_cols[0], self.numeric_cols[1]
+                code = f"""corr = df['{c1}'].corr(df['{c2}'])
+result = {{'answer': f'Correlation between {c1} and {c2}: {{corr:.4f}}', 'data': {{'correlation': round(float(corr),4)}}, 'viz_type': 'number'}}"""
+            else:
+                code = f"""result = {{'answer': 'Need at least 2 numeric columns for correlation', 'data': {{}}, 'viz_type': ''}}"""
 
+        # ===== COUNT / UNIQUE =====
         elif has_any(['how many', 'count', 'unique', 'number of', 'distinct']):
-            code = """counts = df.groupby('sales_rep')['customer_segment'].nunique()
-result = {'answer': 'Unique customer segments handled by each rep', 'data': {str(k): int(v) for k,v in counts.to_dict().items()}, 'viz_type': 'table'}"""
+            if cat_cols:
+                c = group_col if group_col else cat_cols[0]
+                code = f"""counts = df['{c}'].value_counts()
+result = {{'answer': 'Count by {c}: ' + ', '.join([f"{{k}}={{v}}" for k,v in counts.items()]), 'data': {{str(k): int(v) for k,v in counts.to_dict().items()}}, 'viz_type': 'table'}}"""
+            else:
+                code = f"""result = {{'answer': 'No categorical columns to count', 'data': {{}}, 'viz_type': ''}}"""
 
+        # ===== MINIMUM / LOWEST =====
+        elif has_any(['lowest', 'minimum', 'min', 'smallest', 'least']):
+            if group_col:
+                if val_name == 'revenue' and self.has_revenue:
+                    code = f"""df['revenue'] = {val_expr}
+grouped = df.groupby('{group_col}')['revenue'].sum().sort_values(ascending=True)
+result = {{'answer': f'{{grouped.index[0]}} has the lowest {val_name} at {prefix}{{grouped.iloc[0]:,.2f}}', 'data': {{str(k): round(float(v), 2) for k, v in grouped.to_dict().items()}}, 'viz_type': 'bar'}}"""
+                else:
+                    code = f"""grouped = df.groupby('{group_col}')['{val_name}'].sum().sort_values(ascending=True)
+result = {{'answer': f'{{grouped.index[0]}} has the lowest {val_name} at {prefix}{{grouped.iloc[0]:,.2f}}', 'data': {{str(k): round(float(v), 2) for k, v in grouped.to_dict().items()}}, 'viz_type': 'bar'}}"""
+            else:
+                code = f"""min_val = ({val_expr}).min()
+result = {{'answer': f'Minimum {val_name}: {prefix}{{min_val:,.2f}}', 'data': {{'min': round(float(min_val),2)}}, 'viz_type': 'number'}}"""
+
+        # ===== GENERIC FALLBACK =====
         else:
-            code = """df['revenue'] = df['units'] * df['unit_price']
-total = df['revenue'].sum()
-result = {'answer': f'Dataset: {len(df)} rows. Total revenue: ${total:,.2f}. Try: total revenue, top region, avg by segment, growth, compare, correlation', 'data': {'total': round(float(total),2)}, 'viz_type': 'number'}"""
+            code = f"""total = ({val_expr}).sum()
+result = {{'answer': f'Dataset: {{len(df)}} rows. Total {val_name}: {prefix}{{total:,.2f}}. Try: total, top, average, growth, compare, correlation', 'data': {{'total': round(float(total),2)}}, 'viz_type': 'number'}}"""
 
         success, result, output = self.sandbox.run(code)
         if success:
@@ -254,7 +352,7 @@ Rules:
 2. df is pre-loaded. Store answer in `result` = {{'answer': str, 'data': any, 'viz_type': 'table'|'bar'|'line'|'number'|None}}
 3. Compute actual values. No hardcoded numbers.
 4. No imports, no file I/O.
-5. Calculate revenue as df['revenue'] = df['units'] * df['unit_price'] first, then use df['revenue'] for groupby operations.
+5. Use only columns that exist in the dataset.
 
 Example: result = {{'answer': 'Total: $45,230', 'data': {{'total': 45230}}, 'viz_type': 'number'}}"""
 
@@ -351,7 +449,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 # Load HTML from file or use inline
 HTML_CONTENT = ""
-html_path = PROJECT_ROOT / "index.html"
+html_path = PROJECT_ROOT / "dashboard" / "index.html"
 if html_path.exists():
     with open(html_path, "r", encoding="utf-8") as f:
         HTML_CONTENT = f.read()
@@ -367,6 +465,8 @@ async def upload(file: UploadFile = File(...)):
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
         raise HTTPException(400, "Only CSV/Excel files supported")
 
+    sessions.clear()
+
     sid = str(uuid.uuid4())
     path = UPLOAD_DIR / f"{sid}_{file.filename}"
 
@@ -377,7 +477,16 @@ async def upload(file: UploadFile = File(...)):
     try:
         agent = CSVQAAgent(str(path))
         sessions[sid] = {"agent": agent, "filename": file.filename}
-        return {"success": True, "session_id": sid, "filename": file.filename, "schema": agent.schema}
+
+        # Add sample values for dynamic suggestions
+        schema = dict(agent.schema)
+        schema["samples"] = {}
+        for col in agent.df.columns:
+            uniques = agent.df[col].dropna().unique()
+            if len(uniques) <= 10 and len(uniques) > 0:
+                schema["samples"][col] = [str(v) for v in uniques[:5]]
+
+        return {"success": True, "session_id": sid, "filename": file.filename, "schema": schema}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(500, str(e))
@@ -388,17 +497,57 @@ async def api_ask(question: str = Form(...), session_id: str = Form(default=None
     start = time.time()
 
     active_agent = default_agent
+    active_filename = "default_sales.csv"
 
-    # Use provided session_id if valid
     if session_id and session_id in sessions:
         active_agent = sessions[session_id]["agent"]
+        active_filename = sessions[session_id]["filename"]
+        print(f"[ASK] Using session: {session_id} -> {active_filename}")
     elif sessions:
-        # Fallback to latest session
         latest_sid = list(sessions.keys())[-1]
         active_agent = sessions[latest_sid]["agent"]
+        active_filename = sessions[latest_sid]["filename"]
+        print(f"[ASK] Fallback to latest session: {latest_sid} -> {active_filename}")
+    else:
+        print(f"[ASK] Using default agent: {active_filename}")
 
     if active_agent is None:
         return JSONResponse({"success": False, "error": "No CSV loaded. Please upload a file first."}, status_code=400)
+
+    try:
+        response = active_agent.answer(question)
+        print(f"[ASK] Answer from {active_filename}: {response.answer[:50]}...")
+        return JSONResponse({
+            "success": True,
+            "answer": response.answer,
+            "confidence": response.confidence,
+            "viz_type": response.viz_type,
+            "data": response.data,
+            "trace": response.execution_trace,
+            "mode": response.mode,
+            "latency_ms": round((time.time() - start) * 1000, 2),
+            "filename": active_filename
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+@app.post("/ask")
+async def ask(req: dict):
+    import time
+    start = time.time()
+
+    sid = req.get("session_id")
+    question = req.get("question", "")
+
+    if sid and sid in sessions:
+        active_agent = sessions[sid]["agent"]
+        active_filename = sessions[sid]["filename"]
+    elif default_agent:
+        active_agent = default_agent
+        active_filename = "default_sales.csv"
+    else:
+        return JSONResponse({"success": False, "error": "No CSV loaded"}, status_code=400)
 
     try:
         response = active_agent.answer(question)
@@ -410,7 +559,8 @@ async def api_ask(question: str = Form(...), session_id: str = Form(default=None
             "data": response.data,
             "trace": response.execution_trace,
             "mode": response.mode,
-            "latency_ms": round((time.time() - start) * 1000, 2)
+            "latency_ms": round((time.time() - start) * 1000, 2),
+            "filename": active_filename
         })
     except Exception as e:
         traceback.print_exc()
@@ -422,7 +572,7 @@ def health():
 
 if __name__ == "__main__":
     print("="*60)
-    print("CSV QA Agent - Fixed (No SIGALRM)")
+    print("CSV QA Agent - UNIVERSAL VERSION (FIXED)")
     print("="*60)
     print(f"Default agent: {default_agent is not None}")
     print(f"HTML file: {html_path.exists()}")

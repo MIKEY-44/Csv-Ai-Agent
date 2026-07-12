@@ -4,7 +4,121 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CSV AI Agent</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">
+function generateSuggestions(schema) {
+  const container = document.getElementById('suggestionsBox');
+  if (!container) return;
+
+  const columns = schema.columns || [];
+  const samples = schema.samples || {};
+  const pills = [];
+
+  // Helper: check if column is an ID column (not meaningful to aggregate)
+  function isIdCol(name) {
+    const n = name.toLowerCase();
+    return n.includes('id') || n.includes('index') || n.includes('order') || n.includes('entry') || n.includes('game');
+  }
+
+  // Helper: check if column is a date column
+  function isDateCol(name, dtype) {
+    const n = name.toLowerCase();
+    return n.includes('date') || dtype.toLowerCase().includes('date');
+  }
+
+  // Find meaningful numeric columns (exclude IDs)
+  const numericCols = columns.filter(c => {
+    const dtype = c.dtype.toLowerCase();
+    return (dtype.includes('int') || dtype.includes('float') || dtype.includes('number')) && !isIdCol(c.name);
+  }).map(c => c.name);
+
+  // Find ID columns separately (for count queries)
+  const idCols = columns.filter(c => isIdCol(c.name)).map(c => c.name);
+
+  // Find categorical columns (exclude dates)
+  const catCols = columns.filter(c => {
+    const dtype = c.dtype.toLowerCase();
+    return !dtype.includes('int') && !dtype.includes('float') && !dtype.includes('number') && !isDateCol(c.name, c.dtype);
+  }).map(c => c.name);
+
+  // Find date columns
+  const dateCols = columns.filter(c => isDateCol(c.name, c.dtype)).map(c => c.name);
+
+  // If no meaningful numeric cols but we have IDs, use the first non-ID numeric
+  let valueCols = numericCols;
+  if (valueCols.length === 0) {
+    valueCols = columns.filter(c => {
+      const dtype = c.dtype.toLowerCase();
+      return dtype.includes('int') || dtype.includes('float') || dtype.includes('number');
+    }).map(c => c.name);
+  }
+
+  // 1. Total of first meaningful numeric column
+  if (valueCols.length > 0) {
+    const col = valueCols[0];
+    pills.push({q: 'What is the total ' + col + '?', label: 'Total ' + col});
+  }
+
+  // 2. Top categorical by first numeric
+  if (catCols.length > 0 && valueCols.length > 0) {
+    const cat = catCols[0];
+    const num = valueCols[0];
+    const sampleVals = samples[cat] || [];
+    const hint = sampleVals.length > 0 ? ' (' + sampleVals.slice(0,2).join(', ') + '...)' : '';
+    pills.push({q: 'Which ' + cat + ' has the highest ' + num + '?', label: 'Top ' + cat + hint});
+
+    // Average by category
+    pills.push({q: 'What is the average ' + num + ' by ' + cat + '?', label: 'Avg ' + num + ' by ' + cat});
+  }
+
+  // 3. Second categorical
+  if (catCols.length > 1 && valueCols.length > 0) {
+    const cat = catCols[1];
+    const num = valueCols[0];
+    const sampleVals = samples[cat] || [];
+    const hint = sampleVals.length > 0 ? ' (' + sampleVals.slice(0,2).join(', ') + '...)' : '';
+    pills.push({q: 'Which ' + cat + ' has the highest ' + num + '?', label: 'Top ' + cat + hint});
+  }
+
+  // 4. Third categorical
+  if (catCols.length > 2 && valueCols.length > 0) {
+    const cat = catCols[2];
+    const num = valueCols[0];
+    const sampleVals = samples[cat] || [];
+    const hint = sampleVals.length > 0 ? ' (' + sampleVals.slice(0,2).join(', ') + '...)' : '';
+    pills.push({q: 'Which ' + cat + ' has the highest ' + num + '?', label: 'Top ' + cat + hint});
+  }
+
+  // 5. Growth over time
+  if (dateCols.length > 0 && valueCols.length > 0) {
+    pills.push({q: 'What is the month over month growth?', label: 'MoM growth'});
+  }
+
+  // 6. Compare two categoricals
+  if (catCols.length >= 2 && valueCols.length > 0) {
+    pills.push({q: 'Compare ' + catCols[0] + ' vs ' + catCols[1], label: 'Compare'});
+  }
+
+  // 7. Correlation between two numeric columns
+  if (valueCols.length >= 2) {
+    pills.push({q: 'What is the correlation between ' + valueCols[0] + ' and ' + valueCols[1] + '?', label: 'Correlation'});
+  }
+
+  // 8. Count unique
+  if (catCols.length > 0) {
+    pills.push({q: 'How many unique ' + catCols[0] + ' are there?', label: 'Count ' + catCols[0]});
+  }
+
+  // Fallback
+  if (pills.length === 0) {
+    pills.push({q: 'Show me a summary of the data', label: 'Summary'});
+  }
+
+  container.innerHTML = pills.map(p => 
+    '<span class="suggestion-pill" onclick="setQuestion(' + JSON.stringify(p.q).replace(/"/g, '&quot;') + ')">' + p.label + '</span>'
+  ).join('');
+}
+
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -25,6 +139,8 @@
   --input-bg: #ffffff;
   --chart-grid: rgba(0,0,0,0.06);
   --footer-text: #aaaaaa;
+  --error: #e74c3c;
+  --success: #4ade80;
 }
 
 [data-theme="dark"] {
@@ -44,6 +160,8 @@
   --input-bg: #111111;
   --chart-grid: rgba(255,255,255,0.06);
   --footer-text: #555555;
+  --error: #f87171;
+  --success: #4ade80;
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
@@ -158,25 +276,6 @@ body {
   margin-bottom: 48px;
 }
 
-/* Section Label */
-.section-label {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.3rem;
-  font-weight: 400;
-  color: var(--text);
-  margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.section-label::before {
-  content: '';
-  width: 2px;
-  height: 20px;
-  background: var(--accent);
-  border-radius: 1px;
-}
-
 /* Upload Section */
 .upload-section {
   margin-bottom: 32px;
@@ -196,7 +295,7 @@ body {
   background: var(--input-bg);
 }
 .upload-card.dragover {
-  border-color: #4ade80;
+  border-color: var(--success);
   background: rgba(74, 222, 128, 0.05);
 }
 .upload-card h2 {
@@ -209,6 +308,23 @@ body {
 .upload-card p {
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+/* Error Banner */
+.error-banner {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid var(--error);
+  border-radius: 10px;
+  color: var(--error);
+  font-size: 0.85rem;
+}
+.error-banner.visible {
+  display: flex;
 }
 
 /* File Info */
@@ -233,19 +349,12 @@ body {
   color: var(--text);
   font-weight: 500;
 }
-.change-file {
+.file-info .file-type {
   font-size: 0.75rem;
   color: var(--text-muted);
-  cursor: pointer;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: transparent;
-  transition: all 0.15s;
-}
-.change-file:hover {
-  color: var(--text);
-  border-color: var(--text-muted);
+  background: var(--badge-bg);
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 /* Input Box */
@@ -554,7 +663,7 @@ body {
 
 /* Error */
 .error-text {
-  color: #e74c3c;
+  color: var(--error);
   font-size: 0.95rem;
 }
 
@@ -583,6 +692,7 @@ body {
 }
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 <!-- Decorative blobs -->
@@ -606,7 +716,7 @@ body {
 
   <!-- Upload -->
   <div class="upload-section" id="uploadSection">
-    <div class="upload-card" id="uploadCard" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-card" id="uploadCard">
       <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleUpload(event)">
       <h2>Upload your CSV or Excel file</h2>
       <p>Drop a file or click to browse</p>
@@ -614,15 +724,24 @@ body {
   </div>
 
   <!-- Chat -->
-  <div class="chat-section" id="chatSection" style="display:none">
-    <div class="section-label">Query</div>
+  <div class="chat-section" id="chatSection" style="display:none;">
+    <div style="text-align:right;margin-bottom:12px;">
+      <button onclick="showUpload()" style="background:transparent;color:var(--text-muted);border:1px solid var(--border);padding:6px 16px;border-radius:20px;cursor:pointer;font-size:0.8rem;font-family:inherit;transition:all 0.15s;">Change File</button>
+    </div>
+    
+    <!-- Error Banner -->
+    <div class="error-banner" id="errorBanner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <span id="errorText"></span>
+    </div>
 
-    <div class="file-info" id="fileInfo" style="display:none">
+    <!-- File Info -->
+    <div class="file-info" id="fileInfo">
       <div class="file-info-left">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-        <span class="filename" id="fileName"></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        <span class="filename" id="filenameDisplay">No file selected</span>
       </div>
-      <button class="change-file" onclick="resetUpload(event)">Change file</button>
+      <span class="file-type" id="fileType">CSV</span>
     </div>
 
     <div class="input-box">
@@ -633,7 +752,7 @@ body {
       </div>
     </div>
 
-    <div class="suggestions">
+    <div class="suggestions" id="suggestionsBox">
       <span class="suggestion-pill" onclick="setQuestion('What is the total revenue?')">Total revenue</span>
       <span class="suggestion-pill" onclick="setQuestion('Which region had the highest revenue?')">Top region</span>
       <span class="suggestion-pill" onclick="setQuestion('What is the average revenue by segment?')">Avg by segment</span>
@@ -653,6 +772,10 @@ body {
 let sessionId = null;
 let isLoading = false;
 let chartInstances = [];
+let currentFilename = '';
+
+// Hardcoded original upload card HTML for reliable restoration
+const UPLOAD_CARD_ORIGINAL_HTML = '<input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleUpload(event)"><h2>Upload your CSV or Excel file</h2><p>Drop a file or click to browse</p>';
 
 // Theme
 function toggleTheme() {
@@ -681,22 +804,34 @@ if (savedTheme === 'dark') {
 
 // Drag and drop
 const uploadCard = document.getElementById('uploadCard');
-['dragenter','dragover','dragleave','drop'].forEach(evt => {
-  uploadCard.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
-});
-['dragenter','dragover'].forEach(evt => {
-  uploadCard.addEventListener(evt, () => uploadCard.classList.add('dragover'), false);
-});
-['dragleave','drop'].forEach(evt => {
-  uploadCard.addEventListener(evt, () => uploadCard.classList.remove('dragover'), false);
-});
-uploadCard.addEventListener('drop', (e) => {
-  const files = e.dataTransfer.files;
-  if (files.length) {
-    document.getElementById('fileInput').files = files;
-    handleUpload({ target: { files: files } });
+
+function attachDragDropListeners() {
+  ['dragenter','dragover','dragleave','drop'].forEach(evt => {
+    uploadCard.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+  });
+  ['dragenter','dragover'].forEach(evt => {
+    uploadCard.addEventListener(evt, () => uploadCard.classList.add('dragover'), false);
+  });
+  ['dragleave','drop'].forEach(evt => {
+    uploadCard.addEventListener(evt, () => uploadCard.classList.remove('dragover'), false);
+  });
+  uploadCard.addEventListener('drop', (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length) {
+      document.getElementById('fileInput').files = files;
+      handleUpload({ target: { files: files } });
+    }
+  }, false);
+}
+
+// Click to open file dialog
+uploadCard.addEventListener('click', (e) => {
+  if (e.target !== document.getElementById('fileInput')) {
+    document.getElementById('fileInput').click();
   }
-}, false);
+});
+
+attachDragDropListeners();
 
 function setQuestion(q) {
   document.getElementById('questionInput').value = q;
@@ -707,15 +842,37 @@ function clearInput() {
   document.getElementById('questionInput').value = '';
 }
 
-function resetUpload(e) {
-  e.stopPropagation();
+function showError(msg) {
+  const banner = document.getElementById('errorBanner');
+  document.getElementById('errorText').textContent = msg;
+  banner.classList.add('visible');
+  setTimeout(() => banner.classList.remove('visible'), 5000);
+}
+
+function showUpload() {
+  console.log('[showUpload] resetting to upload view');
   sessionId = null;
+  currentFilename = '';
+  
   document.getElementById('uploadSection').style.display = 'block';
   document.getElementById('chatSection').style.display = 'none';
-  document.getElementById('fileInfo').style.display = 'none';
   document.getElementById('responseArea').innerHTML = '';
-  document.getElementById('fileInput').value = '';
-  destroyCharts();
+  document.getElementById('questionInput').value = '';
+  document.getElementById('filenameDisplay').textContent = 'No file selected';
+  document.getElementById('fileType').textContent = 'CSV';
+  document.getElementById('errorBanner').classList.remove('visible');
+  
+  // Restore the upload card content
+  const card = document.getElementById('uploadCard');
+  card.innerHTML = UPLOAD_CARD_ORIGINAL_HTML;
+  
+  // Re-attach all listeners
+  attachDragDropListeners();
+  card.addEventListener('click', (e) => {
+    if (e.target !== document.getElementById('fileInput')) {
+      document.getElementById('fileInput').click();
+    }
+  });
 }
 
 function destroyCharts() {
@@ -723,37 +880,78 @@ function destroyCharts() {
   chartInstances = [];
 }
 
+function isValidFileType(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  return ['csv', 'xlsx', 'xls'].includes(ext);
+}
+
 async function handleUpload(e) {
   const file = e.target.files[0];
+  console.log('[handleUpload] file selected:', file ? file.name : 'none');
   if (!file) return;
 
+  // Validate file type
+  if (!isValidFileType(file.name)) {
+    showError('Only CSV, XLSX, or XLS files are supported');
+    return;
+  }
+
+  currentFilename = file.name;
   const form = new FormData();
   form.append('file', file);
 
-  const card = document.querySelector('.upload-card');
-  card.innerHTML = '<div class="loading-card"><div class="spinner"></div><span>Processing your file...</span></div>';
+  const card = document.getElementById('uploadCard');
+  
+  // Show processing state
+  card.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:16px;"><div class="spinner" style="width:24px;height:24px;border-width:3px;"></div><p style="color:var(--text-muted);font-size:0.95rem;">Processing your file...</p></div>';
 
   try {
+    console.log('[handleUpload] sending fetch to /upload');
     const res = await fetch('/upload', { method: 'POST', body: form });
+    console.log('[handleUpload] response status:', res.status);
+    
     const data = await res.json();
+    console.log('[handleUpload] response data:', data);
+    
     if (!res.ok) throw new Error(data.detail || data.error || 'Upload failed: ' + res.status);
     if (!data.session_id) throw new Error('Upload failed - no session ID');
 
     sessionId = data.session_id;
+    console.log('[handleUpload] success, sessionId:', sessionId);
+    // Generate dynamic suggestions based on uploaded CSV data
+    if (data.schema) {
+      generateSuggestions(data.schema);
+    }
+    
+    // Switch to chat view
     document.getElementById('uploadSection').style.display = 'none';
     document.getElementById('chatSection').style.display = 'block';
-    document.getElementById('fileInfo').style.display = 'flex';
-    document.getElementById('fileName').textContent = file.name;
+    
+    // Show filename
+    document.getElementById('filenameDisplay').textContent = currentFilename;
+    document.getElementById('fileType').textContent = file.name.split('.').pop().toUpperCase();
+    console.log('[handleUpload] filename displayed:', currentFilename);
+    
   } catch (err) {
-    console.error('Upload error:', err);
-    card.innerHTML = '<h2 style="color:#e74c3c;font-family:Playfair Display,serif">Upload Failed</h2><p style="color:var(--text-muted)">' + esc(err.message) + '</p>';
+    console.error('[handleUpload] error:', err);
+    // Restore original content
+    card.innerHTML = UPLOAD_CARD_ORIGINAL_HTML;
+    // Re-attach all listeners
+    attachDragDropListeners();
+    card.addEventListener('click', (e) => {
+      if (e.target !== document.getElementById('fileInput')) {
+        document.getElementById('fileInput').click();
+      }
+    });
+    // Show error
+    showError(err.message);
   }
 }
 
 async function handleAsk() {
   const input = document.getElementById('questionInput');
   const question = input.value.trim();
-  console.log('[handleAsk] question:', question, 'isLoading:', isLoading);
+  console.log('[handleAsk] question:', question, 'isLoading:', isLoading, 'sessionId:', sessionId);
   if (!question) {
     input.focus();
     return;
@@ -790,6 +988,7 @@ async function handleAsk() {
     bodyParams.append('question', question);
     if (sessionId) bodyParams.append('session_id', sessionId);
 
+    console.log('[handleAsk] sending request with sessionId:', sessionId);
     const res = await fetch('/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -801,6 +1000,7 @@ async function handleAsk() {
     }
 
     const data = await res.json();
+    console.log('[handleAsk] response:', data);
 
     // Remove loading card
     const loadCard = document.getElementById(loadingId);
@@ -941,6 +1141,7 @@ function renderResponse(data, question) {
 
   const modeText = data.mode === 'llm' ? 'LLM' : 'RULE';
   const latency = data.latency_ms ? data.latency_ms.toFixed(2) + 'MS' : '';
+  const sourceFile = data.filename ? ' • ' + data.filename : '';
 
   const traceHtml = data.trace && data.trace.length
     ? '<div class="trace-toggle" data-trace-toggle="1">View trace</div><div class="trace-box">' + esc(data.trace.join('\n')) + '</div>'
@@ -952,7 +1153,7 @@ function renderResponse(data, question) {
     vizHtml +
     '<div class="response-meta">' +
       '<span class="badge-mode">' + modeText + '</span>' +
-      '<span class="latency">' + latency + '</span>' +
+      '<span class="latency">' + latency + sourceFile + '</span>' +
     '</div>' +
     traceHtml;
 
@@ -992,6 +1193,120 @@ document.getElementById('questionInput').addEventListener('keydown', function(e)
     handleAsk();
   }
 });
+
+function generateSuggestions(schema) {
+  const container = document.getElementById('suggestionsBox');
+  if (!container) return;
+
+  const columns = schema.columns || [];
+  const samples = schema.samples || {};
+  const pills = [];
+
+  // Helper: check if column is an ID column (not meaningful to aggregate)
+  function isIdCol(name) {
+    const n = name.toLowerCase();
+    return n.includes('id') || n.includes('index') || n.includes('order') || n.includes('entry') || n.includes('game');
+  }
+
+  // Helper: check if column is a date column
+  function isDateCol(name, dtype) {
+    const n = name.toLowerCase();
+    return n.includes('date') || dtype.toLowerCase().includes('date');
+  }
+
+  // Find meaningful numeric columns (exclude IDs)
+  const numericCols = columns.filter(c => {
+    const dtype = c.dtype.toLowerCase();
+    return (dtype.includes('int') || dtype.includes('float') || dtype.includes('number')) && !isIdCol(c.name);
+  }).map(c => c.name);
+
+  // Find ID columns separately (for count queries)
+  const idCols = columns.filter(c => isIdCol(c.name)).map(c => c.name);
+
+  // Find categorical columns (exclude dates)
+  const catCols = columns.filter(c => {
+    const dtype = c.dtype.toLowerCase();
+    return !dtype.includes('int') && !dtype.includes('float') && !dtype.includes('number') && !isDateCol(c.name, c.dtype);
+  }).map(c => c.name);
+
+  // Find date columns
+  const dateCols = columns.filter(c => isDateCol(c.name, c.dtype)).map(c => c.name);
+
+  // If no meaningful numeric cols but we have IDs, use the first non-ID numeric
+  let valueCols = numericCols;
+  if (valueCols.length === 0) {
+    valueCols = columns.filter(c => {
+      const dtype = c.dtype.toLowerCase();
+      return dtype.includes('int') || dtype.includes('float') || dtype.includes('number');
+    }).map(c => c.name);
+  }
+
+  // 1. Total of first meaningful numeric column
+  if (valueCols.length > 0) {
+    const col = valueCols[0];
+    pills.push({q: 'What is the total ' + col + '?', label: 'Total ' + col});
+  }
+
+  // 2. Top categorical by first numeric
+  if (catCols.length > 0 && valueCols.length > 0) {
+    const cat = catCols[0];
+    const num = valueCols[0];
+    const sampleVals = samples[cat] || [];
+    const hint = sampleVals.length > 0 ? ' (' + sampleVals.slice(0,2).join(', ') + '...)' : '';
+    pills.push({q: 'Which ' + cat + ' has the highest ' + num + '?', label: 'Top ' + cat + hint});
+
+    // Average by category
+    pills.push({q: 'What is the average ' + num + ' by ' + cat + '?', label: 'Avg ' + num + ' by ' + cat});
+  }
+
+  // 3. Second categorical
+  if (catCols.length > 1 && valueCols.length > 0) {
+    const cat = catCols[1];
+    const num = valueCols[0];
+    const sampleVals = samples[cat] || [];
+    const hint = sampleVals.length > 0 ? ' (' + sampleVals.slice(0,2).join(', ') + '...)' : '';
+    pills.push({q: 'Which ' + cat + ' has the highest ' + num + '?', label: 'Top ' + cat + hint});
+  }
+
+  // 4. Third categorical
+  if (catCols.length > 2 && valueCols.length > 0) {
+    const cat = catCols[2];
+    const num = valueCols[0];
+    const sampleVals = samples[cat] || [];
+    const hint = sampleVals.length > 0 ? ' (' + sampleVals.slice(0,2).join(', ') + '...)' : '';
+    pills.push({q: 'Which ' + cat + ' has the highest ' + num + '?', label: 'Top ' + cat + hint});
+  }
+
+  // 5. Growth over time
+  if (dateCols.length > 0 && valueCols.length > 0) {
+    pills.push({q: 'What is the month over month growth?', label: 'MoM growth'});
+  }
+
+  // 6. Compare two categoricals
+  if (catCols.length >= 2 && valueCols.length > 0) {
+    pills.push({q: 'Compare ' + catCols[0] + ' vs ' + catCols[1], label: 'Compare'});
+  }
+
+  // 7. Correlation between two numeric columns
+  if (valueCols.length >= 2) {
+    pills.push({q: 'What is the correlation between ' + valueCols[0] + ' and ' + valueCols[1] + '?', label: 'Correlation'});
+  }
+
+  // 8. Count unique
+  if (catCols.length > 0) {
+    pills.push({q: 'How many unique ' + catCols[0] + ' are there?', label: 'Count ' + catCols[0]});
+  }
+
+  // Fallback
+  if (pills.length === 0) {
+    pills.push({q: 'Show me a summary of the data', label: 'Summary'});
+  }
+
+  container.innerHTML = pills.map(p => 
+    '<span class="suggestion-pill" onclick="setQuestion(' + JSON.stringify(p.q).replace(/"/g, '&quot;') + ')">' + p.label + '</span>'
+  ).join('');
+}
+
 </script>
 </body>
 </html>
